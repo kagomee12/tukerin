@@ -2,11 +2,32 @@ package main
 
 import (
 	"fmt"
+	"tukerin/config"
+	"tukerin/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/subosito/gotenv"
 )
 
 func main(){
+
+	gotenv.Load()
+
+	config.ConnectDB()
+
+	config.DB.AutoMigrate(
+		&models.User{},
+		&models.Role{},
+		&models.Order{},
+		&models.OrderItem{},
+		&models.Product{},
+		&models.Payment{},
+		&models.Cart{},
+		&models.CartItem{},
+		&models.Category{},
+		&models.Otp{},
+	)
+
 	route := gin.Default()
 	route.GET("/", func(c *gin.Context) {
 		fmt.Println("hello world")
