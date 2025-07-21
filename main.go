@@ -15,6 +15,19 @@ func main(){
 
 	config.ConnectDB()
 
+	// config.DB.Migrator().DropTable(
+	// 	&models.User{},
+	// 	&models.Role{},
+	// 	&models.Order{},
+	// 	&models.OrderItem{},
+	// 	&models.Product{},
+	// 	&models.Payment{},
+	// 	&models.Cart{},
+	// 	&models.CartItem{},
+	// 	&models.Category{},
+	// 	&models.Otp{},
+	// )
+
 	config.DB.AutoMigrate(
 		&models.User{},
 		&models.Role{},
