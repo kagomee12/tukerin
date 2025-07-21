@@ -11,7 +11,6 @@ type User struct {
 	Password  string     `gorm:"size:100;not null;" json:"password"`
 	Product   []Product  `gorm:"foreignKey:UserId"`
 	Cart      Cart       `gorm:"foreignKey:UserId"`
-	CartItems []CartItem `gorm:"foreignKey:UserId"`
 	Otp       []Otp      `gorm:"foreignKey:UserId"`
 }
 
