@@ -9,10 +9,10 @@ import (
 
 func SendEmail(to string, subject string, body string) error {
 
-	from := os.Getenv("EMAIL_FROM")
-	password := os.Getenv("EMAIL_PASSWORD")
-	host := os.Getenv("SMTP_HOST")
-	port, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	from := os.Getenv("EMAIL_USER")
+	password := os.Getenv("EMAIL_PASS")
+	host := os.Getenv("EMAIL_HOST")
+	port, _ := strconv.Atoi(os.Getenv("EMAIL_PORT"))
 
 
 	m := gomail.NewMessage()
@@ -26,5 +26,6 @@ func SendEmail(to string, subject string, body string) error {
 	if err:= d.DialAndSend(m); err != nil {
 		return err
 	}
+
 	return nil
 }
