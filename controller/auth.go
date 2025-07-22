@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 	"tukerin/config"
 	"tukerin/models"
 	"tukerin/utils"
@@ -78,10 +80,14 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	var expires_at = time.Now().Add(5 * time.Minute) 
+
 	otpModel := models.Otp{
 		UserId: int(existingUser.ID),
+		Email:  existingUser.Email,
 		Code:   otp,
 		Type:   "login",
+		ExpiresAt: expires_at, // OTP valid for 5 minutes
 	}
 
 	if err := config.DB.Create(&otpModel).Error; err != nil {
@@ -91,14 +97,14 @@ func Login(c *gin.Context) {
 
 	utils.SendEmail(existingUser.Email, "Your OTP Code", "Your OTP code is: "+otp)
 
-	c.JSON(http.StatusOK, gin.H{"message": "OTP sent to your email", "user": existingUser})
+	c.JSON(http.StatusOK, gin.H{"message": "OTP sent to your email"})
 
 }
 
 func VerifyOTP(c *gin.Context) {
 	var request struct {
-		Email string `json:"email"`
-		Code  string `json:"code"`
+		Email string `json:"email" form:"email"`
+		Code  string `json:"otp" form:"otp"`
 	}
 
 	if err := c.ShouldBind(&request); err != nil {
@@ -109,7 +115,14 @@ func VerifyOTP(c *gin.Context) {
 	var otp models.Otp
 	var user models.User
 
-	if err := config.DB.Where("user_id = ? AND code = ?", request.Email, request.Code).First(&user).Error; err != nil {
+	fmt.Println("Verifying OTP for email:", request.Email)
+
+	if err := config.DB.Where("email = ?", request.Email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email"})
+		return
+	}
+
+	if err := config.DB.Where("user_id = ? AND code = ? AND expires_at > NOW()", user.ID, request.Code).Order("created_at DESC").First(&otp).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP"})
 		return
 	}
@@ -126,5 +139,5 @@ func VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully", "token": token, "user": user})
+	c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully", "token": token})
 }
