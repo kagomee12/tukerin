@@ -1,9 +1,7 @@
 package models
 
-import "gorm.io/gorm"
-
 type OrderItem struct {
-	gorm.Model
+	BaseModel
 	OrderId    int     `gorm:"not null;" json:"order_id"`
 	Order      Order   `gorm:"foreignKey:OrderId"`
 	ProductId  int     `gorm:"not null;" json:"product_id"`

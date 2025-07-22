@@ -1,9 +1,7 @@
 package models
 
-import "gorm.io/gorm"
-
 type User struct {
-	gorm.Model
+	BaseModel
 	Name      string `gorm:"size:255;not null;unique" json:"name"`
 	Email     string `gorm:"size:100;not null;unique" json:"email"`
 	RoleId    int    `gorm:"not null;" json:"role"`
@@ -15,7 +13,7 @@ type User struct {
 }
 
 type Role struct {
-	gorm.Model
+	BaseModel
 	Name        string `gorm:"size:100;not null;unique" json:"name"`
 	Description string `gorm:"size:100;not null;" json:"description"`
 	Users       []User

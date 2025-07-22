@@ -1,8 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Otp struct {
+	BaseModel
 	Email string `json:"email"`
 	Code string `json:"otp"`
 	ExpiresAt time.Time `json:"expires_at"`

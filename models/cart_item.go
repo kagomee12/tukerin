@@ -1,9 +1,8 @@
 package models
 
-import "gorm.io/gorm"
 
 type CartItem struct {
-	gorm.Model
+	BaseModel
 	CartId    int     `gorm:"not null;" json:"cart_id"`
 	Cart      Cart    `gorm:"foreignKey:CartId"`
 	ProductId int     `gorm:"not null;" json:"product_id"`
