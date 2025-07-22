@@ -11,6 +11,6 @@ func AuthRoute(r *gin.Engine) {
 	{
 		auth.POST("/login", controller.Login)
 		auth.POST("/register", controller.Register)
-		auth.POST("/validate-token", controller.VerifyOTP)
+		auth.POST("/validate-otp", controller.VerifyOTP)
 	}
 }
