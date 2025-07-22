@@ -3,6 +3,8 @@ package seeder
 import (
 	"tukerin/config"
 	"tukerin/models"
+
+	"gorm.io/gorm"
 )
 
 func SeederRoles() {
@@ -11,5 +13,13 @@ func SeederRoles() {
 		{Name: "seller", Description: "Seller with access to product management"},
 	}
 
-	config.DB.Create(&roles)
+	for _, role := range roles {
+		var existingRole models.Role
+		if err := config.DB.Where("name = ?", role.Name).First(&existingRole).Error; err != nil {
+			if err == gorm.ErrRecordNotFound{
+				config.DB.Create(&role)
+			}
+		}
+			
+	}
 }
