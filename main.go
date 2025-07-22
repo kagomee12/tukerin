@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"tukerin/config"
 	"tukerin/config/seeder"
+	"tukerin/routes"
 
 	// "tukerin/models"
-
-	"github.com/gin-gonic/gin"
 	"github.com/subosito/gotenv"
 )
 
@@ -31,15 +29,8 @@ func main(){
 	// )
 
 	config.Migrate()
-
 	seeder.SeederRoles()
 
-	route := gin.Default()
-	route.GET("/", func(c *gin.Context) {
-		fmt.Println("hello world")
-		c.JSON(200, gin.H{
-			"message": "hello world",
-		})
-	})
-	route.Run(":8080")
+	routes.IndexRoute()
+
 }
