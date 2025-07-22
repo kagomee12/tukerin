@@ -15,7 +15,7 @@ func Register(c *gin.Context) {
 	var user models.User
 	var cart models.Cart
 
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBind(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -28,12 +28,14 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+
+	user.Password = string(hash)
+
 	if config.DB.Create(&user).Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
@@ -47,20 +49,24 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	user.Password = string(hash)
-
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully", "user": user})
+	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
 }
 
 func Login(c *gin.Context) {
 	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBind(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var existingUser models.User
-	if err := config.DB.Where("email = ? AND password = ?", user.Email, user.Password).First(&existingUser).Error; err != nil {
+
+	if err := config.DB.Where("email = ?", user.Email).First(&existingUser).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -95,7 +101,7 @@ func VerifyOTP(c *gin.Context) {
 		Code  string `json:"code"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
