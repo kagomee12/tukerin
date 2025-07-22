@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"tukerin/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -25,4 +26,22 @@ func ConnectDB() {
 	}
 	
 	DB = db
+}
+
+func Migrate() {
+	err := DB.AutoMigrate(
+		&models.User{},
+		&models.Role{},
+		&models.Order{},
+		&models.OrderItem{},
+		&models.Product{},
+		&models.Payment{},
+		&models.Cart{},
+		&models.CartItem{},
+		&models.Category{},
+		&models.Otp{},
+	)
+	if err != nil {
+		panic("Failed to migrate database")
+	}
 }

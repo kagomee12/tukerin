@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"tukerin/config"
-	"tukerin/models"
+	"tukerin/config/seeder"
+
+	// "tukerin/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/subosito/gotenv"
@@ -28,18 +30,9 @@ func main(){
 	// 	&models.Otp{},
 	// )
 
-	config.DB.AutoMigrate(
-		&models.User{},
-		&models.Role{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Product{},
-		&models.Payment{},
-		&models.Cart{},
-		&models.CartItem{},
-		&models.Category{},
-		&models.Otp{},
-	)
+	config.Migrate()
+
+	seeder.SeederRoles()
 
 	route := gin.Default()
 	route.GET("/", func(c *gin.Context) {
