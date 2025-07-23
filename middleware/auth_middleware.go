@@ -1,10 +1,10 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,7 +15,6 @@ type AuthClaims struct {
 	Email  string    `json:"email"`
 	Name   string    `json:"name"`
 	Role   string    `json:"role"`
-	Exp    time.Time `json:"exp"`
 	jwt.RegisteredClaims
 }
 
@@ -51,6 +50,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			fmt.Println("Error parsing token:", err)
+			fmt.Println("Token is invalid or expired")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
