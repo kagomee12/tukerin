@@ -30,6 +30,7 @@ func main(){
 
 	config.Migrate()
 	seeder.SeederRoles()
+	seeder.SeederCategories()
 
 	routes.IndexRoute()
 
