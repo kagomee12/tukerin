@@ -39,12 +39,25 @@ func GetProducts(c *gin.Context) {
 
 	var total int64
 
-	if err := config.DB.Model(&models.Product{}).Count(&total).Error; err != nil {
+	name_product := c.Query("name_product")
+	category := c.Query("category")
+	category_id, _ := strconv.Atoi(category)
+
+	query := config.DB.Model(&models.Product{})
+
+	if name_product != "" {
+		query = query.Where("name ILIKE ?", "%"+name_product+"%")
+	}
+	if category != "" {
+		query = query.Where("category_id =?", category_id)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count products"})
 		return
 	}
 
-	if err := config.DB.Limit(limit).Offset(offset).Preload("Category").Preload("User").Preload("User.Role").Find(&products).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Preload("Category").Preload("User").Preload("User.Role").Find(&products).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
 		return
 	}
@@ -84,20 +97,43 @@ func GetProducts(c *gin.Context) {
 
 func GetProductByID(c *gin.Context) {
 	var product models.Product
+	var data types.ProductsDTO
 	productID := c.Param("id")
 
-	userID, exists := c.Get("user_id")
+	_, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
 		return
 	}
 
-	if err := config.DB.Where("id = ? AND user_id = ?", productID, userID).Preload("Category").Preload("User").First(&product).Error; err != nil {
+	if err := config.DB.Where("id = ?", productID).Preload("Category").Preload("User").Preload("User.Role").First(&product).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": product})
+	data = types.ProductsDTO{
+		Name: 	  product.Name,
+		Description: product.Description,
+		Price:	  product.Price,
+		CategoryId: product.CategoryId,
+		UserId:	  product.UserId,
+		Category: types.CategoryDTO{
+			ID:   product.Category.ID,
+			Name: product.Category.Name,
+		},
+		User: types.UserDTO{
+			ID:    product.User.ID,
+			Name:  product.User.Name,
+			Email: product.User.Email,
+			RoleId: strconv.Itoa(product.User.RoleId),
+			Role: types.RoleDTO{
+				ID:   product.User.Role.ID,
+				Name: product.User.Role.Name,
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": data} )
 }
 
 func CreateProduct(c *gin.Context) {
