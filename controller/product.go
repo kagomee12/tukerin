@@ -3,10 +3,12 @@ package controller
 import (
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"tukerin/config"
 	"tukerin/models"
 	"tukerin/type"
+	"tukerin/utils"
 
 	"net/http"
 
@@ -16,7 +18,7 @@ import (
 func GetProducts(c *gin.Context) {
 	var products []models.Product
 	var data []types.ProductsDTO
-	
+
 	_, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
@@ -63,34 +65,44 @@ func GetProducts(c *gin.Context) {
 	}
 
 	for _, product := range products {
+
+		var images []types.ImageDTO
+		for _, image := range product.Images {
+			images = append(images, types.ImageDTO{
+				ID:  image.ID,
+				URL: image.URL,
+			})
+		}
+
 		data = append(data, types.ProductsDTO{
-			Name: 	  product.Name,
+			Name:        product.Name,
 			Description: product.Description,
-			Price:	  product.Price,
-			CategoryId: product.CategoryId,
-			UserId:	  product.UserId,
+			Price:       product.Price,
+			CategoryId:  product.CategoryId,
+			UserId:      product.UserId,
 			Category: types.CategoryDTO{
 				ID:   product.Category.ID,
 				Name: product.Category.Name,
 			},
 			User: types.UserDTO{
-				ID:    product.User.ID,
-				Name:  product.User.Name,
-				Email: product.User.Email,
+				ID:     product.User.ID,
+				Name:   product.User.Name,
+				Email:  product.User.Email,
 				RoleId: strconv.Itoa(product.User.RoleId),
 				Role: types.RoleDTO{
 					ID:   product.User.Role.ID,
 					Name: product.User.Role.Name,
 				},
 			},
+			Images: images,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": data,
-		"limit": limit,
-		"page": page,
-		"total": total,
+		"data":       data,
+		"limit":      limit,
+		"page":       page,
+		"total":      total,
 		"totalPages": int(math.Ceil(float64(total) / float64(limit))),
 	})
 }
@@ -112,19 +124,19 @@ func GetProductByID(c *gin.Context) {
 	}
 
 	data = types.ProductsDTO{
-		Name: 	  product.Name,
+		Name:        product.Name,
 		Description: product.Description,
-		Price:	  product.Price,
-		CategoryId: product.CategoryId,
-		UserId:	  product.UserId,
+		Price:       product.Price,
+		CategoryId:  product.CategoryId,
+		UserId:      product.UserId,
 		Category: types.CategoryDTO{
 			ID:   product.Category.ID,
 			Name: product.Category.Name,
 		},
 		User: types.UserDTO{
-			ID:    product.User.ID,
-			Name:  product.User.Name,
-			Email: product.User.Email,
+			ID:     product.User.ID,
+			Name:   product.User.Name,
+			Email:  product.User.Email,
 			RoleId: strconv.Itoa(product.User.RoleId),
 			Role: types.RoleDTO{
 				ID:   product.User.Role.ID,
@@ -133,16 +145,14 @@ func GetProductByID(c *gin.Context) {
 		},
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": data} )
+	c.JSON(http.StatusOK, gin.H{"data": data})
 }
 
 func CreateProduct(c *gin.Context) {
-	var product models.Product
-
-	if err := c.ShouldBind(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+	priceStr, _ := strconv.ParseFloat(c.PostForm("price"), 64)
+	categoryIdStr, _ := strconv.Atoi(c.PostForm("category_id"))
 
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -150,14 +160,43 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	product.UserId = userID.(int)
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
+		return
+	}
+
+	files := form.File["images"]
+
+	imageURLs, err := utils.UploadMultipleFiles(files, os.Getenv("MINIO_BUCKET"))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+		return
+	}
+
+	var images []models.Image
+	for _, url := range imageURLs {
+		images = append(images, models.Image{
+			URL: url,
+		})
+	}
+
+	product := models.Product{
+		Name:        name,
+		Description: description,
+		Price:       priceStr,
+		CategoryId:  categoryIdStr,
+		UserId:      userID.(int),
+		Images:      images,
+	}
 
 	if err := config.DB.Where("id = ?", product.CategoryId).First(&models.Category{}).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
 		return
 	}
 
-	if err := config.DB.Select("name", "description", "price", "category_id", "user_id").Create(&product).Error; err != nil {
+	if err := config.DB.Create(&product).Error; err != nil {
 		fmt.Println("Error creating product:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product"})
 		return
