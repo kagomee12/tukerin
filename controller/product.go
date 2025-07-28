@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 	"tukerin/config"
 	"tukerin/models"
 	"tukerin/type"
@@ -207,12 +208,6 @@ func CreateProduct(c *gin.Context) {
 
 func UpdateProduct(c *gin.Context) {
 	var product models.Product
-	productID := c.Param("id")
-
-	if err := c.ShouldBind(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -220,7 +215,85 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	if err := config.DB.Model(&product).Where("id = ? AND user_id = ?", productID, userID).Updates(product).Error; err != nil {
+	productID := c.Param("id")
+
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+	priceStr, _ := strconv.ParseFloat(c.PostForm("price"), 64)
+	categoryIdStr, _ := strconv.Atoi(c.PostForm("category_id"))
+	deleted_images := []int{}
+	
+	deletedImagesStr := c.PostForm("deleted_images")
+	if deletedImagesStr != "" {
+		for _, idStr := range strings.Split(deletedImagesStr, ",") {
+			if id, err := strconv.Atoi(idStr); err == nil {
+				deleted_images = append(deleted_images, id)
+			}
+		}
+	}
+
+	if err := config.DB.Where("id = ? AND user_id = ?", productID, userID).First(&product).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+
+	if name != "" {
+		product.Name = name
+	}
+	if description != "" {
+		product.Description = description
+	}
+	if priceStr != 0 {
+		product.Price = priceStr
+	}
+
+	if categoryIdStr != 0 { 
+		if err := config.DB.Where("id = ?", categoryIdStr).First(&models.Category{}).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
+			return
+		}
+		product.CategoryId = categoryIdStr
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
+		return
+	}
+
+	if form.File["images"] != nil {
+		files := form.File["images"]
+
+		imagesURls, err := utils.UploadMultipleFiles(files, os.Getenv("MINIO_BUCKET"))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload images"})
+			return
+		}
+
+		var images []models.Image
+
+		for _, url := range imagesURls {
+			images = append(images, models.Image{
+				URL: url,
+			})
+		}
+
+		product.Images = images
+	}
+
+	if len(deleted_images) > 0 {
+		for _, imageID := range deleted_images {
+			var image models.Image
+			if err := config.DB.Where("id = ? AND owner_type ILIKE ? AND owner_id = ?", imageID, "%Product%", product.ID).First(&image).Error; err == nil {
+				if err := config.DB.Delete(&image).Error; err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+					return
+				}
+			}
+		}
+	}
+	if err := config.DB.Save(&product).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
 		return
 	}
@@ -234,6 +307,11 @@ func DeleteProduct(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+		return
+	}
+
+	if err := config.DB.Where("owner_type = ? AND owner_id = ?", "product", productID).Delete(&models.Image{}).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
