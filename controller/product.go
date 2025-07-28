@@ -119,9 +119,17 @@ func GetProductByID(c *gin.Context) {
 		return
 	}
 
-	if err := config.DB.Where("id = ?", productID).Preload("Category").Preload("User").Preload("User.Role").First(&product).Error; err != nil {
+	if err := config.DB.Where("id = ?", productID).Preload("Category").Preload("User").Preload("User.Role").Preload("Images").First(&product).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
+	}
+
+	var images []types.ImageDTO
+	for _, image := range product.Images {
+		images = append(images, types.ImageDTO{
+			ID:  image.ID,
+			URL: image.URL,
+		})
 	}
 
 	data = types.ProductsDTO{
@@ -144,6 +152,7 @@ func GetProductByID(c *gin.Context) {
 				Name: product.User.Role.Name,
 			},
 		},
+		Images: images,
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": data})
