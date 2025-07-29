@@ -8,6 +8,7 @@ func IndexRoute() {
 	route := gin.Default()
 
 	AuthRoute(route)
+	ProductRoute(route)
 
 	route.Run(":8081") // Start the server on port 8080
 }

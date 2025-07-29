@@ -40,6 +40,7 @@ func Migrate() {
 		&models.CartItem{},
 		&models.Category{},
 		&models.Otp{},
+		&models.Image{},
 	)
 	if err != nil {
 		panic("Failed to migrate database")

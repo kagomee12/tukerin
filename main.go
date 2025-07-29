@@ -4,6 +4,7 @@ import (
 	"tukerin/config"
 	"tukerin/config/seeder"
 	"tukerin/routes"
+	"tukerin/services"
 
 	// "tukerin/models"
 	"github.com/subosito/gotenv"
@@ -30,6 +31,9 @@ func main(){
 
 	config.Migrate()
 	seeder.SeederRoles()
+	seeder.SeederCategories()
+
+	services.InitMinioClient()
 
 	routes.IndexRoute()
 

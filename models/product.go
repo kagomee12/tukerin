@@ -9,11 +9,12 @@ type Product struct {
 	Category Category
 	UserId int `gorm:"not null;" json:"user_id" form:"user_id"`
 	User User `gorm:"foreignKey:UserId"`
+	Quantity int `gorm:"default:0" json:"quantity" form:"quantity"`
+	Images []Image `gorm:"polymorphicType:OwnerType;polymorphicId:OwnerId;polymorphicValue:Product" json:"images"`
 }
 
 type Category struct {
 	BaseModel
 	Name string `gorm:"size:100;not null;unique" json:"name" form:"name"`
 	Description string `gorm:"size:100;not null;" json:"description" form:"description"`
-	Products []Product
 }
